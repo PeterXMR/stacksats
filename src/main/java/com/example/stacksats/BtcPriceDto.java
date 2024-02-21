@@ -1,14 +1,16 @@
 package com.example.stacksats;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
 @AllArgsConstructor
 @NoArgsConstructor
+@Data
 public class BtcPriceDto {
-        public String id;
+        public int id;
         public Date date;
         public Double price_ars;
         public Double price_cad;
