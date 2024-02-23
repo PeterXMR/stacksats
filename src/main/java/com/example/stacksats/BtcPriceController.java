@@ -28,7 +28,7 @@ public class BtcPriceController {
     }
 
     @GetMapping("/historic-records")
-    public List<BtcPriceDto> getAndSaveHistoricRecords() throws InterruptedException {
+    public ResponseEntity<List<BtcPriceDto>> getAndSaveHistoricRecords() throws InterruptedException {
         List<BtcPriceDto> btcPriceDtoList = btcPriceService.getHistoricRecords();
         List<BtcPrice> btcPriceList = new ArrayList<>();
         btcPriceList = btcPriceDtoList
@@ -36,7 +36,7 @@ public class BtcPriceController {
                 .map(btcPriceDto -> modelMapper.map(btcPriceDto, BtcPrice.class))
                 .toList();
         btcPriceService.saveAll(btcPriceList);
-        return btcPriceDtoList;
+        return ResponseEntity.ok().body(btcPriceDtoList);
     }
 
     @DeleteMapping("/delete/{id}")
