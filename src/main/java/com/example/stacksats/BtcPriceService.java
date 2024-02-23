@@ -134,20 +134,6 @@ public class BtcPriceService {
         btcPriceRepository.saveAll(btcPriceList);
     }
 
-    @Transactional
-    public void save() {
-        BtcPrice price = new BtcPrice();
-        price.setId(1);
-        price.setDate(date);
-        price.setPrice_ars(2.1);
-        price.setPrice_cad(2.1);
-        price.setPrice_czk(2.1);
-        price.setPrice_eur(2.1);
-        price.setPrice_nok(2.1);
-        price.setPrice_usd(2.1);
-        btcPriceRepository.save(price);
-    }
-
     public void deleteRecordById(Long id) {
         btcPriceRepository.deleteById(id);
     }
