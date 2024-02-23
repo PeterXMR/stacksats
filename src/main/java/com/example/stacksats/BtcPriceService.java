@@ -6,7 +6,6 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,6 +15,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import com.example.stacksats.utils.Constants;
+import com.example.stacksats.utils.CurrencyEnum;;
 
 @Slf4j
 @Service
@@ -24,13 +26,12 @@ public class BtcPriceService {
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
     private final BtcPriceRepository btcPriceRepository;
-    private Date date;
 
     public BtcPriceService(ObjectMapper objectMapper, BtcPriceRepository btcPriceRepository) {
         this.objectMapper = objectMapper;
         this.btcPriceRepository = btcPriceRepository;
         restClient = RestClient.builder()
-                .baseUrl("https://api.coingecko.com/api/v3/coins/bitcoin/history")
+                .baseUrl(Constants.base_url)
                 .build();
     }
 
@@ -41,16 +42,15 @@ public class BtcPriceService {
     public List<BtcPriceDto> getHistoricRecords() throws InterruptedException {
 
         List<BtcPriceDto> btcPriceDtoList = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
-        String start_date = "04-11-2022 00:00";
-        LocalDateTime first_date = LocalDateTime.parse(start_date, formatter);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.date_time_pattern);
+        LocalDateTime first_date = LocalDateTime.parse(Constants.start_date, formatter);
         LocalDateTime now = LocalDateTime.now();
         int i = 0;
         while (first_date.isBefore(now)) {
             TimeUnit.SECONDS.sleep(1);
             i++;
             BtcPriceDto dto;
-            dto = getHistoricRecord(formatter.format(first_date).substring(0,10));
+            dto = getHistoricRecord(formatter.format(first_date).substring(0, 10));
             btcPriceDtoList.add(dto);
             first_date = first_date.plusMonths(1);
             if (i > 2) {
@@ -64,17 +64,17 @@ public class BtcPriceService {
 
     private BtcPriceDto getHistoricRecord(String record_for_date) {
         String data = getHistoricRecordsForDate(record_for_date);
-        date = formatDate(record_for_date);
-        return parseJsonData(data,date);
+        Date date = formatDate(record_for_date);
+        return parseJsonData(data, date);
     }
 
     private Date formatDate(String record_for_date) {
-        SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
-        date = new Date();
+        SimpleDateFormat formatter = new SimpleDateFormat(Constants.simple_date_pattern, Locale.getDefault());
+        Date date = new Date();
         try {
             date = formatter.parse(record_for_date);
         } catch (ParseException e) {
-            log.error("Error occurred, cannot parse date {}" , e.getMessage());
+            log.error("Error occurred, cannot parse date {}", e.getMessage());
         }
         return date;
     }
@@ -89,7 +89,7 @@ public class BtcPriceService {
             dto = parseJson(json, date);
 
         } catch (IOException e) {
-            log.error("Error occurred, cannot read JSON data {}" , e.getMessage());
+            log.error("Error occurred, cannot read JSON data {}", e.getMessage());
             throw new RuntimeException("Error occurred, cannot read JSON data");
         }
         return dto;
@@ -97,18 +97,21 @@ public class BtcPriceService {
 
     private String getHistoricRecordsForDate(String date) {
         return restClient.get()
-                .uri("?date=" + date + "&localization=false")
+                .uri(Constants.uri_date + date + "&localization=false")
                 .retrieve()
                 .body(String.class);
     }
 
     private BtcPriceDto parseJson(JsonNode json, Date date) {
-        List<String> currencyNames = Arrays.asList("ars", "cad", "czk", "eur", "nok", "usd");
+        List<String> currencyNames = Arrays.stream(CurrencyEnum.values())
+                .map(currency -> currency.label)
+                .collect(Collectors.toUnmodifiableList());
+
         BtcPriceDto dto = new BtcPriceDto();
         dto.date = date;
         Optional.ofNullable(json)
-                .map(j -> j.get("market_data"))
-                .map(j -> j.get("current_price").properties())
+                .map(j -> j.get(Constants.market_data))
+                .map(j -> j.get(Constants.current_price).properties())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid JSON data"))
                 .stream()
                 .filter(currency -> currencyNames.contains(currency.getKey()))
@@ -138,4 +141,3 @@ public class BtcPriceService {
         btcPriceRepository.deleteById(id);
     }
 }
-

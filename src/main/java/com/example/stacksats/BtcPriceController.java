@@ -14,7 +14,6 @@ import java.util.List;
 public class BtcPriceController {
 
     private final BtcPriceService btcPriceService;
-
     private final ModelMapper modelMapper;
 
     public BtcPriceController(BtcPriceService btcPriceService, ModelMapper modelMapper) {
@@ -42,5 +41,6 @@ public class BtcPriceController {
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteRecordById(@PathVariable Long id) {
         btcPriceService.deleteRecordById(id);
-        return ResponseEntity.ok().body("Record with id + " + id + " deleted successfully");    }
+        return ResponseEntity.ok().body("Record with id + " + id + " deleted successfully");
+    }
 }
