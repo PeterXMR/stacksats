@@ -9,5 +9,4 @@ class StackSatsApplicationTests {
     @Test
     void contextLoads() {
     }
-
 }

@@ -1,23 +1,33 @@
 package com.example.stacksats;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
 import com.example.stacksats.utils.Constants;
-import com.example.stacksats.utils.CurrencyEnum;;
+import com.example.stacksats.utils.CurrencyEnum;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;;
 
 @Slf4j
 @Service
@@ -42,19 +52,18 @@ public class BtcPriceService {
     public List<BtcPriceDto> getHistoricRecords() throws InterruptedException {
 
         List<BtcPriceDto> btcPriceDtoList = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.date_time_pattern);
-        LocalDateTime first_date = LocalDateTime.parse(Constants.start_date, formatter);
+        LocalDateTime first_date = getFirstDate();
         LocalDateTime now = LocalDateTime.now();
         int i = 0;
         while (first_date.isBefore(now)) {
-            TimeUnit.SECONDS.sleep(1);
             i++;
             BtcPriceDto dto;
-            dto = getHistoricRecord(formatter.format(first_date).substring(0, 10));
+            dto = getHistoricRecord(Constants.formatter.format(first_date).substring(0, 10));
             btcPriceDtoList.add(dto);
             first_date = first_date.plusMonths(1);
             if (i > 2) {
-                TimeUnit.MINUTES.sleep(2);
+                TimeUnit.MINUTES.sleep(1);
+                TimeUnit.SECONDS.sleep(5);
                 i = 0;
             }
         }
@@ -139,5 +148,28 @@ public class BtcPriceService {
 
     public void deleteRecordById(Long id) {
         btcPriceRepository.deleteById(id);
+    }
+
+    public LocalDateTime getFirstDate() {
+        return LocalDateTime.parse(Constants.start_date, Constants.formatter);
+    }
+
+    public HashMap<Date, Double> datesMap() {
+        HashMap<Date, Double> map = new HashMap<>();
+        for (BtcPrice btcPrice : findAll()) {
+            map.put(btcPrice.date, btcPrice.getPrice_usd());
+        }
+        return map;
+    }
+
+    public Collection<Number> convertToActualList(HashMap<Date, Double> datesMap) {
+        Collection<Number> actualList = new ArrayList<>();
+        int bitcoin_total = 0;
+        for (Map.Entry<Date, Double> entry : datesMap.entrySet()) {
+            int stackedSats = Constants.investment_amount * Constants.satoshi_per_bitcoin / entry.getValue().intValue();
+            bitcoin_total += stackedSats;
+            actualList.add(bitcoin_total);
+        }
+        return actualList;
     }
 }

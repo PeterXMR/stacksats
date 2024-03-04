@@ -11,4 +11,3 @@ CREATE TABLE records
     price_nok DOUBLE PRECISION NOT NULL,
     price_usd DOUBLE PRECISION NOT NULL
 );
-
