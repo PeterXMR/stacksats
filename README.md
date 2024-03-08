@@ -1,15 +1,15 @@
-# stacksats
+# Stacksats
 
 This app is rewrite of https://github.com/PeterXMR/twitterFeeStacker
 
 ## Requirements
 
-Java 21
+[Java 21](https://www.oracle.com/java/technologies/downloads/)
 
 [Docker](https://www.docker.com/) running locally for PostgresDB container
 
 
-## How to run
+## Running Stacksats
 
 Call: http://localhost:8080/historic-records to load data. Request processing could take few minutes,
 as its call free API which are limited to requests per minute. It will return JSON and save data to DB.
