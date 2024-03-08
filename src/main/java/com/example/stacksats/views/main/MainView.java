@@ -1,8 +1,8 @@
 package com.example.stacksats.views.main;
 
-import java.time.ZoneOffset;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 
 import com.example.stacksats.BtcPriceService;
@@ -26,17 +26,17 @@ import com.vaadin.flow.router.Route;
 @Route("")
 public class MainView extends VerticalLayout {
 
-  BtcPriceService btcPriceService;
+  @SuppressWarnings("unused")
+  private final  BtcPriceService btcPriceService;
 
   public MainView(BtcPriceService btcPriceService) {
     this.btcPriceService = btcPriceService;
-    btcPriceService.deleteRecordById(1L);
-    VerticalLayout todosList = new VerticalLayout();
+    VerticalLayout verticalLayout = new VerticalLayout();
 
     add(
         new H1(
             "Rather stack some sats than to pay for Twiteer/X monthly verified account fee, here's why:"),
-        todosList,
+            verticalLayout,
         new HorizontalLayout());
 
     Chart chart = new Chart(ChartType.LINE);
@@ -55,13 +55,12 @@ public class MainView extends VerticalLayout {
     legend.setAlign(HorizontalAlign.RIGHT);
 
     PlotOptionsSeries plotOptionsSeries = new PlotOptionsSeries();
-    plotOptionsSeries.setPointStart(btcPriceService.getFirstDate().toInstant(ZoneOffset.ofTotalSeconds(7200)));
     plotOptionsSeries.setPointStart(2022);
     plotOptionsSeries.setPointIntervalUnit(IntervalUnit.MONTH);
     plotOptionsSeries.setPointInterval(1);
     configuration.setPlotOptions(plotOptionsSeries);
 
-    HashMap<Date, Double> datesMap = btcPriceService.datesMap();
+    HashMap<LocalDate, BigDecimal> datesMap = btcPriceService.datesMap();
     Collection<Number> actualList = btcPriceService.convertToActualList(datesMap);
 
     configuration.addSeries(new ListSeries("Sats", actualList));
@@ -69,6 +68,6 @@ public class MainView extends VerticalLayout {
     Navigator navigator = configuration.getNavigator();
     navigator.setEnabled(true);
     navigator.setMargin(75);
-    todosList.add(chart);
+    verticalLayout.add(chart);
   }
 }

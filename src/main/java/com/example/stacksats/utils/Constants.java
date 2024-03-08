@@ -1,18 +1,26 @@
 package com.example.stacksats.utils;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Currency;
+import java.util.List;
 
 public class Constants {
 
-    public static final String base_url = "https://api.coingecko.com/api/v3/coins/bitcoin/history";
-    public static final String date_time_pattern = "dd-MM-yyyy HH:mm";
-    public static final String simple_date_pattern = "dd-MM-yyyy";
-    public static final String start_date = "04-11-2022 00:00";
-    public static final String market_data = "market_data";
-    public static final String current_price = "current_price";
-    public static final String uri_date = "?date=";
-    public static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.date_time_pattern);
-    public static final Integer satoshi_per_bitcoin = 100000000;
-    public static final Integer investment_amount = 8;
-
+    public static final String BASE_URL = "https://api.coingecko.com/api/v3/coins/bitcoin/history";
+    public static final String DATE_TIME_PATTERN = "dd-MM-yyyy HH:mm";
+    public static final String SIMPLE_DATE_PATTERN = "dd-MM-yyyy";
+    public static final String START_DATE = "04-11-2022 00:00";
+    public static final String MARKET_DATA = "market_data";
+    public static final String CURRENT_PRICE = "current_price";
+    public static final String URI_DATE = "?date=";
+    public static final String URI_LOCALIZATION = "&localization=false";
+    public static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_PATTERN);
+    public static final Integer SATOSHI_PER_BITCOIN = 100000000;
+    public static final Integer INVESTMENT_AMOUNT = 8;
+    public static final LocalDate FIRST_DATE = LocalDate.parse(START_DATE, FORMATTER);
+    public static final List<Currency> CURRENCY_LIST = Arrays.asList(
+            Currency.getInstance("ARS"), Currency.getInstance("CAD"), Currency.getInstance("CZK"), Currency.getInstance("EUR"),
+            Currency.getInstance("NOK"), Currency.getInstance("USD"));
 }

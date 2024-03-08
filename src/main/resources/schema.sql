@@ -1,13 +1,13 @@
-DROP TABLE IF EXISTS records;
+DROP TABLE IF EXISTS btc_price;
 
-CREATE TABLE records
+CREATE TABLE btc_price
 (
     id  SERIAL PRIMARY KEY,
     date  date NOT NULL,
-    price_ars DOUBLE PRECISION NOT NULL,
-    price_cad DOUBLE PRECISION NOT NULL,
-    price_czk DOUBLE PRECISION NOT NULL,
-    price_eur DOUBLE PRECISION NOT NULL,
-    price_nok DOUBLE PRECISION NOT NULL,
-    price_usd DOUBLE PRECISION NOT NULL
+    price_ars DECIMAL(15, 2) NOT NULL,
+    price_cad DECIMAL(15, 2) NOT NULL,
+    price_czk DECIMAL(15, 2) NOT NULL,
+    price_eur DECIMAL(15, 2) NOT NULL,
+    price_nok DECIMAL(15, 2) NOT NULL,
+    price_usd DECIMAL(15, 2) NOT NULL
 );

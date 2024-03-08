@@ -3,16 +3,12 @@ package com.example.stacksats;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import com.example.stacksats.utils.Constants;
-import com.example.stacksats.utils.CurrencyEnum;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -41,7 +36,7 @@ public class BtcPriceService {
         this.objectMapper = objectMapper;
         this.btcPriceRepository = btcPriceRepository;
         restClient = RestClient.builder()
-                .baseUrl(Constants.base_url)
+                .baseUrl(Constants.BASE_URL)
                 .build();
     }
 
@@ -52,15 +47,17 @@ public class BtcPriceService {
     public List<BtcPriceDto> getHistoricRecords() throws InterruptedException {
 
         List<BtcPriceDto> btcPriceDtoList = new ArrayList<>();
-        LocalDateTime first_date = getFirstDate();
-        LocalDateTime now = LocalDateTime.now();
+
+        LocalDate experimentDate = Constants.FIRST_DATE;
+        LocalDate nowLocalDate = LocalDate.now();
+
         int i = 0;
-        while (first_date.isBefore(now)) {
+        while (experimentDate.isBefore(nowLocalDate)) {
             i++;
             BtcPriceDto dto;
-            dto = getHistoricRecord(Constants.formatter.format(first_date).substring(0, 10));
+            dto = getHistoricBtcPrice(experimentDate);
             btcPriceDtoList.add(dto);
-            first_date = first_date.plusMonths(1);
+            experimentDate = experimentDate.plusMonths(1);
             if (i > 2) {
                 TimeUnit.MINUTES.sleep(1);
                 TimeUnit.SECONDS.sleep(5);
@@ -71,74 +68,59 @@ public class BtcPriceService {
         return btcPriceDtoList;
     }
 
-    private BtcPriceDto getHistoricRecord(String record_for_date) {
-        String data = getHistoricRecordsForDate(record_for_date);
-        Date date = formatDate(record_for_date);
-        return parseJsonData(data, date);
+    private BtcPriceDto getHistoricBtcPrice(LocalDate localDate) {
+        String response = getHistoricBtcPriceForDate(localDate);
+        return parseJsonData(response, localDate);
     }
 
-    private Date formatDate(String record_for_date) {
-        SimpleDateFormat formatter = new SimpleDateFormat(Constants.simple_date_pattern, Locale.getDefault());
-        Date date = new Date();
-        try {
-            date = formatter.parse(record_for_date);
-        } catch (ParseException e) {
-            log.error("Error occurred, cannot parse date {}", e.getMessage());
-        }
-        return date;
-    }
-
-    private BtcPriceDto parseJsonData(String data, Date date) {
+    private BtcPriceDto parseJsonData(String response, LocalDate date) {
         JsonNode json;
-        BtcPriceDto dto;
+        BtcPriceDto btcPriceDto;
         try {
-            assert data != null;
-            InputStream inputStream = new ByteArrayInputStream(data.getBytes());
+            assert response != null;
+            InputStream inputStream = new ByteArrayInputStream(response.getBytes());
             json = objectMapper.readValue(inputStream, JsonNode.class);
-            dto = parseJson(json, date);
+            btcPriceDto = parseJson(json, date);
 
         } catch (IOException e) {
             log.error("Error occurred, cannot read JSON data {}", e.getMessage());
             throw new RuntimeException("Error occurred, cannot read JSON data");
         }
-        return dto;
+        return btcPriceDto;
     }
 
-    private String getHistoricRecordsForDate(String date) {
+    private String getHistoricBtcPriceForDate(LocalDate date) {
+        String dateUrl = Constants.FORMATTER.format(date.atStartOfDay()).substring(0, 10);
         return restClient.get()
-                .uri(Constants.uri_date + date + "&localization=false")
+                .uri(Constants.URI_DATE + dateUrl + Constants.URI_LOCALIZATION)
                 .retrieve()
                 .body(String.class);
     }
 
-    private BtcPriceDto parseJson(JsonNode json, Date date) {
-        List<String> currencyNames = Arrays.stream(CurrencyEnum.values())
-                .map(currency -> currency.label)
+    private BtcPriceDto parseJson(JsonNode json, LocalDate date) {
+        List<String> currencyNames = Constants.CURRENCY_LIST.stream()
+                .map(currency -> currency.getCurrencyCode().toLowerCase())
                 .collect(Collectors.toUnmodifiableList());
 
-        BtcPriceDto dto = new BtcPriceDto();
-        dto.date = date;
+        BtcPriceDto btcPriceDto = new BtcPriceDto();
+        btcPriceDto.date = date;
         Optional.ofNullable(json)
-                .map(j -> j.get(Constants.market_data))
-                .map(j -> j.get(Constants.current_price).properties())
+                .map(j -> j.get(Constants.MARKET_DATA))
+                .map(j -> j.get(Constants.CURRENT_PRICE).properties())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid JSON data"))
                 .stream()
                 .filter(currency -> currencyNames.contains(currency.getKey()))
                 .forEach(currency -> {
                     switch (currency.getKey()) {
-                        case "ars" -> dto.price_ars = formatTwoDecimals(currency.getValue().doubleValue());
-                        case "cad" -> dto.price_cad = formatTwoDecimals(currency.getValue().doubleValue());
-                        case "czk" -> dto.price_czk = formatTwoDecimals(currency.getValue().doubleValue());
-                        case "eur" -> dto.price_eur = formatTwoDecimals(currency.getValue().doubleValue());
-                        case "nok" -> dto.price_nok = formatTwoDecimals(currency.getValue().doubleValue());
-                        case "usd" -> dto.price_usd = formatTwoDecimals(currency.getValue().doubleValue());
+                        case "ars" -> btcPriceDto.priceArs = currency.getValue().decimalValue();
+                        case "cad" -> btcPriceDto.priceCad = currency.getValue().decimalValue();
+                        case "czk" -> btcPriceDto.priceCzk = currency.getValue().decimalValue();
+                        case "eur" -> btcPriceDto.priceEur = currency.getValue().decimalValue();
+                        case "nok" -> btcPriceDto.priceNok = currency.getValue().decimalValue();
+                        case "usd" -> btcPriceDto.priceUsd = currency.getValue().decimalValue();
                     }
                 });
-        return dto;
-    }
-
-    private Double formatTwoDecimals(double value) {
-        return Double.parseDouble(String.format("%.2f", value));
+        return btcPriceDto;
     }
 
     @Transactional
@@ -150,25 +132,21 @@ public class BtcPriceService {
         btcPriceRepository.deleteById(id);
     }
 
-    public LocalDateTime getFirstDate() {
-        return LocalDateTime.parse(Constants.start_date, Constants.formatter);
-    }
-
-    public HashMap<Date, Double> datesMap() {
-        HashMap<Date, Double> map = new HashMap<>();
+    public HashMap<LocalDate, BigDecimal> datesMap() {
+        HashMap<LocalDate, BigDecimal> datesMap = new HashMap<>();
         for (BtcPrice btcPrice : findAll()) {
-            map.put(btcPrice.date, btcPrice.getPrice_usd());
+            datesMap.put(btcPrice.getDate(), btcPrice.getPriceUsd());
         }
-        return map;
+        return datesMap;
     }
 
-    public Collection<Number> convertToActualList(HashMap<Date, Double> datesMap) {
+    public Collection<Number> convertToActualList(HashMap<LocalDate, BigDecimal> datesMap) {
         Collection<Number> actualList = new ArrayList<>();
-        int bitcoin_total = 0;
-        for (Map.Entry<Date, Double> entry : datesMap.entrySet()) {
-            int stackedSats = Constants.investment_amount * Constants.satoshi_per_bitcoin / entry.getValue().intValue();
-            bitcoin_total += stackedSats;
-            actualList.add(bitcoin_total);
+        int bitcoinTotal = 0;
+        for (Map.Entry<LocalDate, BigDecimal> entry : datesMap.entrySet()) {
+            int stackedSats = Constants.INVESTMENT_AMOUNT * Constants.SATOSHI_PER_BITCOIN / entry.getValue().intValue();
+            bitcoinTotal += stackedSats;
+            actualList.add(bitcoinTotal);
         }
         return actualList;
     }
