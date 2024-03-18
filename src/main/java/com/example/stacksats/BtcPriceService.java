@@ -11,7 +11,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -47,22 +52,30 @@ public class BtcPriceService {
     public List<BtcPriceDto> getHistoricRecords() throws InterruptedException {
 
         List<BtcPriceDto> btcPriceDtoList = new ArrayList<>();
+        LocalDate startDate = Constants.FIRST_DATE;
+        LocalDate now = LocalDate.now();
+        AtomicInteger i = new AtomicInteger(0);
+        AtomicLong monthCount = new AtomicLong(0);
+        AtomicBoolean dataLoaded = new AtomicBoolean(false);
+        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
-        LocalDate experimentDate = Constants.FIRST_DATE;
-        LocalDate nowLocalDate = LocalDate.now();
-
-        int i = 0;
-        while (experimentDate.isBefore(nowLocalDate)) {
-            i++;
-            BtcPriceDto dto;
-            dto = getHistoricBtcPrice(experimentDate);
-            btcPriceDtoList.add(dto);
-            experimentDate = experimentDate.plusMonths(1);
-            if (i > 2) {
-                TimeUnit.MINUTES.sleep(1);
-                TimeUnit.SECONDS.sleep(5);
-                i = 0;
+        Runnable getHistoricBtcPrice = () -> {
+            for (i.set(0); i.get() < 4; i.incrementAndGet()) {
+                if (startDate.plusMonths(monthCount.get()).isBefore(now)) {
+                    BtcPriceDto dto = getHistoricBtcPrice(startDate.plusMonths(monthCount.get()));
+                    btcPriceDtoList.add(dto);
+                    monthCount.incrementAndGet();
+                    i.incrementAndGet();
+                } else {
+                    dataLoaded.set(true);
+                    executorService.shutdown();
+                    break;
+                }
             }
+        };
+
+        if (!dataLoaded.get()) {
+            executorService.scheduleAtFixedRate(getHistoricBtcPrice, 0, Constants.PERIOD_IN_SECONDS, TimeUnit.SECONDS);
         }
 
         return btcPriceDtoList;
@@ -132,22 +145,22 @@ public class BtcPriceService {
         btcPriceRepository.deleteById(id);
     }
 
-    public HashMap<LocalDate, BigDecimal> datesMap() {
-        HashMap<LocalDate, BigDecimal> datesMap = new HashMap<>();
+    public HashMap<LocalDate, BigDecimal> priceForDateMap() {
+        HashMap<LocalDate, BigDecimal> priceForDateMap = new HashMap<>();
         for (BtcPrice btcPrice : findAll()) {
-            datesMap.put(btcPrice.getDate(), btcPrice.getPriceUsd());
+            priceForDateMap.put(btcPrice.getDate(), btcPrice.getPriceUsd());
         }
-        return datesMap;
+        return priceForDateMap;
     }
 
-    public Collection<Number> convertToActualList(HashMap<LocalDate, BigDecimal> datesMap) {
-        Collection<Number> actualList = new ArrayList<>();
-        int bitcoinTotal = 0;
-        for (Map.Entry<LocalDate, BigDecimal> entry : datesMap.entrySet()) {
+    public Collection<Number> convertToSatsList(HashMap<LocalDate, BigDecimal> priceForDateMap) {
+        Collection<Number> satsList = new ArrayList<>();
+        int totalSats = 0;
+        for (Map.Entry<LocalDate, BigDecimal> entry : priceForDateMap.entrySet()) {
             int stackedSats = Constants.INVESTMENT_AMOUNT * Constants.SATOSHI_PER_BITCOIN / entry.getValue().intValue();
-            bitcoinTotal += stackedSats;
-            actualList.add(bitcoinTotal);
+            totalSats += stackedSats;
+            satsList.add(totalSats);
         }
-        return actualList;
+        return satsList;
     }
 }

@@ -21,4 +21,5 @@ public class Constants {
     public static final List<Currency> CURRENCY_LIST = Arrays.asList(
             Currency.getInstance("ARS"), Currency.getInstance("CAD"), Currency.getInstance("CZK"), Currency.getInstance("EUR"),
             Currency.getInstance("NOK"), Currency.getInstance("USD"));
+    public static final int PERIOD_IN_SECONDS = 65;
 }

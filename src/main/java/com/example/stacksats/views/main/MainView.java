@@ -60,10 +60,9 @@ public class MainView extends VerticalLayout {
     plotOptionsSeries.setPointInterval(1);
     configuration.setPlotOptions(plotOptionsSeries);
 
-    HashMap<LocalDate, BigDecimal> datesMap = btcPriceService.datesMap();
-    Collection<Number> actualList = btcPriceService.convertToActualList(datesMap);
-
-    configuration.addSeries(new ListSeries("Sats", actualList));
+    HashMap<LocalDate, BigDecimal> priceForDateMap = btcPriceService.priceForDateMap();
+    Collection<Number> satsList = btcPriceService.convertToSatsList(priceForDateMap);
+    configuration.addSeries(new ListSeries("Sats", satsList));
 
     Navigator navigator = configuration.getNavigator();
     navigator.setEnabled(true);
